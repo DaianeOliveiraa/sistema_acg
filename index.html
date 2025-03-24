@@ -1,0 +1,737 @@
+frontend:
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload de Certificados - IFNMG</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            max-width: 1000px;
+            margin: 20px auto;
+            transition: var(--transition);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        img {
+            width: 180px;
+            margin-bottom: 15px;
+        }
+        input, button {
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .professor-container {
+            margin-top: 40px;
+            display: none;
+        }
+        .certificate-preview {
+            cursor: pointer;
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+
+        .certificate-preview:hover {
+            color: #003d7a;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            float: right;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .action-buttons button {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+        }
+
+        .btn-approve {
+            background-color: var(--success-color);
+        }
+
+        .btn-reject {
+            background-color: var(--danger-color);
+        }
+        .btn-change {
+            background-color: var(--warning-color);
+            color: var(--dark-color);
+        }
+
+        .category-selector {
+            padding: 8px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--secondary-color);
+            margin-right: 10px;
+        }
+
+        .hours-input {
+            width: 60px;
+            padding: 8px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--secondary-color);
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-pendente {
+            background-color: var(--warning-color);
+            color: var(--dark-color);
+        }
+
+        .status-aprovado {
+            background-color: var(--success-color);
+            color: white;
+        }
+        .status-rejeitado {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .status-classificado {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        /* Adicionar no <style> */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px;
+    background-color: #28a745;
+    color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+    animation: slideIn 0.5s forwards;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.refresh-button {
+    background-color: var(--secondary-color);
+    margin-left: 10px;
+}
+
+.refresh-button:hover {
+    background-color: #5a6268;
+}
+    </style>
+</head>
+<body>
+    <div class="container" id="studentSection">
+        <img src="static/IFNMG-Logo.png" alt="Logo IFNMG">
+        <h2>Registro ACG's - Aluno</h2>
+        <input type="file" id="fileInput" multiple>
+        <button onclick="uploadFiles()">Enviar</button>
+
+        <h3>Resultados dos Arquivos</h3>
+        <table id="resultTable">
+            <thead>
+                <tr>
+                    <th>Nome do Arquivo</th>
+                    <th>Classificação da Atividade</th>
+                    <th>C.H. do Certificado</th>
+                    <th>C.H. Contabilizada</th>
+                    <th>Status</th>
+                    <th>Comentários</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- 🔹 Resumo de Horas e Progresso -->
+        <div class="summary">
+            <h3>Resumo Geral</h3>
+            <p><strong>Total de Horas Contabilizadas:</strong> <span id="totalHorasValidadas">0</span>/200h</p>
+            <p><strong>Progresso:</strong> <span id="progresso">0%</span></p>
+            <p><strong>Falta:</strong> <span id="faltamHoras">200</span>h para atingir o limite</p>
+            <h4>Atividades que já atingiram o limite máximo:</h4>
+            <ul id="atividadesMaximas"></ul>
+        </div>
+
+        <div class="user-switch">
+            <button onclick="switchToProfessor()">Acessar como Professor</button>
+        </div>
+    </div>
+
+    <!-- Seção do Professor -->
+    <div class="container hidden" id="professorSection">
+        <h2 class="section-title">Avaliar Certificados - Professor</h2>
+        
+        <div class="table-responsive">
+            <table id="professorTable">
+                <thead>
+                    <tr>
+                        <th>Nome do Arquivo</th>
+                        <th>Certificado</th>
+                        <th>Categoria Atual</th>
+                        <th>Horas</th>
+                        <th>Status</th>
+                        <th>Comentários</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="user-switch">
+            <button onclick="switchToStudent()" class="secondary">Voltar para Aluno</button>
+        </div>
+    </div>
+
+    <!-- Modal para visualização do certificado -->
+    <div id="certificateModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle">Visualização do Certificado</h3>
+            <div id="modalContent">
+                <p>Carregando certificado...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para alterar categoria -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3>Alterar Categoria</h3>
+            <div>
+                <p>Arquivo: <strong id="currentFilename"></strong></p>
+                <p>Categoria atual: <strong id="currentCategory"></strong></p>
+                
+                <div style="margin: 20px 0;">
+                    <label for="newCategory">Nova Categoria:</label>
+                    <select id="newCategory" class="category-selector"></select>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label for="validHours">Horas Validadas:</label>
+                    <input type="number" id="validHours" class="hours-input" min="0" step="0.1">
+                </div>
+                
+                <button onclick="confirmCategoryChange()" class="btn-change">Confirmar Alteração</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFileData = [];
+
+        function uploadFiles() {
+            let files = document.getElementById("fileInput").files;
+            if (files.length === 0) {
+                alert("Selecione pelo menos um arquivo.");
+                return;
+            }
+
+            let formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append("files", files[i]);
+            }
+
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                currentFileData = data.resultados;
+                updateStudentTable();
+            })
+            .catch(error => alert("Erro ao enviar arquivos: " + error.message));
+        }
+
+        function updateStudentTable() {
+            let resultTable = document.getElementById("resultTable").getElementsByTagName('tbody')[0];
+            resultTable.innerHTML = "";
+
+            let totalHorasValidadas = 0;
+            let atividadeHoras = {}; // Armazena horas por atividade
+
+            currentFileData.forEach(item => {
+                let row = resultTable.insertRow();
+                row.insertCell(0).textContent = item.arquivo;
+                row.insertCell(1).textContent = item.classificacao.categoria;
+                row.insertCell(2).textContent = item.classificacao.horas_extraidas;
+                row.insertCell(3).textContent = item.classificacao.horas_validadas;
+                row.insertCell(4).textContent = item.status || "Pendente";
+                row.insertCell(5).textContent = item.comment || "";
+
+                // Atualiza totais
+                totalHorasValidadas += item.classificacao.horas_validadas;
+
+                // Acumula horas por atividade
+                if (!atividadeHoras[item.classificacao.categoria]) {
+                    atividadeHoras[item.classificacao.categoria] = 0;
+                }
+                atividadeHoras[item.classificacao.categoria] += item.classificacao.horas_validadas;
+            });
+
+            // Atualiza o resumo
+            document.getElementById("totalHorasValidadas").textContent = `${totalHorasValidadas}`;
+
+            let progresso = (totalHorasValidadas / 200) * 100;
+            document.getElementById("progresso").textContent = `${progresso.toFixed(2)}%`;
+
+            let faltamHoras = Math.max(200 - totalHorasValidadas, 0);
+            document.getElementById("faltamHoras").textContent = faltamHoras;
+
+            // Identificar atividades que atingiram o limite máximo
+            let atividadesMaximas = [];
+            currentFileData.forEach(item => {
+                if (atividadeHoras[item.classificacao.categoria] >= item.classificacao.limite_maximo) {
+                    if (!atividadesMaximas.includes(item.classificacao.categoria)) {
+                        atividadesMaximas.push(item.classificacao.categoria);
+                    }
+                }
+            });
+
+            let listaAtividades = document.getElementById("atividadesMaximas");
+            listaAtividades.innerHTML = "";
+            atividadesMaximas.forEach(categoria => {
+                let li = document.createElement("li");
+                li.textContent = categoria;
+                listaAtividades.appendChild(li);
+            });
+        }
+
+        function switchToProfessor() {
+            document.getElementById("studentSection").style.display = "none";
+            document.getElementById("professorSection").style.display = "block";
+            updateProfessorView();
+        }
+
+        function switchToStudent() {
+            document.getElementById("professorSection").style.display = "none";
+            document.getElementById("studentSection").style.display = "block";
+        }
+
+        function updateProfessorView() {
+            let professorTable = document.getElementById("professorTable").getElementsByTagName('tbody')[0];
+            professorTable.innerHTML = "";
+            currentFileData.forEach(item => {
+                let row = professorTable.insertRow();
+                row.insertCell(0).textContent = item.arquivo;
+                row.insertCell(1).textContent = "Imagem não disponível"; 
+                row.insertCell(2).textContent = item.comment || "";
+                let actionCell = row.insertCell(3);
+                actionCell.textContent = "Ações aqui";
+            });
+        }
+
+        let currentEditingFile = null;
+
+        // Função para atualizar a visão do professor
+        async function updateProfessorView() {
+            try {
+                const response = await fetch("/uploads");
+                const files = await response.json();
+                
+                const professorTable = document.getElementById("professorTable").getElementsByTagName('tbody')[0];
+                professorTable.innerHTML = "";
+                
+                // Carregar categorias para o seletor
+                const categoriesResponse = await fetch("/categorias");
+                const categories = await categoriesResponse.json();
+
+                files.forEach(file => {
+                    const row = professorTable.insertRow();
+                    
+                    // Nome do arquivo
+                    row.insertCell(0).textContent = file.filename;
+                    
+                    // Visualização do certificado
+                    const previewCell = row.insertCell(1);
+                    previewCell.innerHTML = `<span class="certificate-preview" onclick="viewCertificate('${file.filename}')">Visualizar</span>`;
+                    
+                    // Categoria atual
+                    row.insertCell(2).textContent = file.categoria || "Não classificada";
+                    
+                    // Horas (extraídas/validadas)
+                    const hoursCell = row.insertCell(3);
+                    hoursCell.textContent = `${file.horas_validadas || 0}/${file.horas_extraidas || 0}h`;
+                    
+                    // Status
+                    const statusCell = row.insertCell(4);
+                    const statusClass = `status-${file.status.toLowerCase()}`;
+                    statusCell.innerHTML = `<span class="status-badge ${statusClass}">${file.status}</span>`;
+                    
+                    // Comentários
+                    row.insertCell(5).textContent = file.comment || "Sem comentários";
+                    
+                    // Ações
+                    const actionCell = row.insertCell(6);
+                    actionCell.innerHTML = `
+                        <div class="action-buttons">
+                            <button class="btn-approve" onclick="approveCertificate('${file.filename}')">Aprovar</button>
+                            <button class="btn-reject" onclick="showRejectPrompt('${file.filename}')">Rejeitar</button>
+                            <button class="btn-change" onclick="showCategoryChange('${file.filename}', '${file.categoria || ""}', ${file.horas_validadas || 0})">Alterar</button>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error("Erro ao carregar arquivos:", error);
+                alert("Erro ao carregar lista de certificados");
+            }
+        }
+        // Modificar a função de visualização de certificado
+function viewCertificate(filename) {
+    const modal = document.getElementById("certificateModal");
+    const modalContent = document.getElementById("modalContent");
+    const modalTitle = document.getElementById("modalTitle");
+    
+    modalTitle.textContent = `Certificado: ${filename}`;
+    
+    // Adicionar timestamp para evitar cache
+    const timestamp = new Date().getTime();
+    const pdfUrl = `/uploads/${filename}?t=${timestamp}`;
+    
+    modalContent.innerHTML = `
+        <iframe 
+            src="${pdfUrl}" 
+            style="width:100%; height:70vh;" 
+            frameborder="0"
+            type="application/pdf"
+        ></iframe>
+    `;
+    
+    modal.style.display = "block";
+}
+
+// Adicionar tratamento de erro
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const files = e.target.files;
+    for (let i = 0; i < files.length; i++) {
+        if (files[i].type !== 'application/pdf') {
+            alert('Por favor, envie apenas arquivos PDF');
+            e.target.value = ''; // Limpa o input
+            return;
+        }
+    }
+});
+        // Aprovar certificado
+        async function approveCertificate(filename) {
+            try {
+                const response = await fetch("/aprovar_certificado", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ filename })
+                });
+                
+                const result = await response.json();
+                alert(result.mensagem);
+                updateProfessorView();
+            } catch (error) {
+                console.error("Erro ao aprovar certificado:", error);
+                alert("Erro ao aprovar certificado");
+            }
+        }
+
+        // Rejeitar certificado
+        async function rejectCertificate(filename, motivo) {
+            try {
+                const response = await fetch("/rejeitar_certificado", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ filename, motivo })
+                });
+                
+                const result = await response.json();
+                alert(result.mensagem);
+                updateProfessorView();
+            } catch (error) {
+                console.error("Erro ao rejeitar certificado:", error);
+                alert("Erro ao rejeitar certificado");
+            }
+        }
+
+        // Mostrar prompt para rejeição
+        function showRejectPrompt(filename) {
+            const motivo = prompt("Digite o motivo da rejeição:");
+            if (motivo !== null && motivo.trim() !== "") {
+                rejectCertificate(filename, motivo);
+            }
+        }
+
+        // Mostrar modal para alterar categoria
+        async function showCategoryChange(filename, currentCategory, currentHours) {
+            currentEditingFile = filename;
+            
+            const modal = document.getElementById("categoryModal");
+            const categorySelect = document.getElementById("newCategory");
+            const currentFilename = document.getElementById("currentFilename");
+            const currentCategoryElem = document.getElementById("currentCategory");
+            const validHours = document.getElementById("validHours");
+            
+            // Carregar categorias
+            try {
+                const response = await fetch("/categorias");
+                const categories = await response.json();
+                
+                categorySelect.innerHTML = "";
+                categories.forEach(cat => {
+                    const option = document.createElement("option");
+                    option.value = cat;
+                    option.textContent = cat;
+                    categorySelect.appendChild(option);
+                });
+
+                if (currentCategory) {
+                    categorySelect.value = currentCategory;
+                }
+            } catch (error) {
+                console.error("Erro ao carregar categorias:", error);
+            }
+            
+            currentFilename.textContent = filename;
+            currentCategoryElem.textContent = currentCategory || "Não classificada";
+            validHours.value = currentHours || 0;
+            
+            modal.style.display = "block";
+        }
+
+        // Confirmar alteração de categoria
+        async function confirmCategoryChange() {
+            const newCategory = document.getElementById("newCategory").value;
+            const validHours = parseFloat(document.getElementById("validHours").value);
+            
+            if (!newCategory || isNaN(validHours)) {
+                alert("Por favor, selecione uma categoria e informe as horas validadas");
+                return;
+            }
+            
+            try {
+                const response = await fetch("/atualizar_categoria", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        filename: currentEditingFile,
+                        categoria: newCategory,
+                        horas_validadas: validHours
+                    })
+                });
+                
+                const result = await response.json();
+                alert(result.mensagem);
+                closeModal();
+                updateProfessorView();
+            } catch (error) {
+                console.error("Erro ao atualizar categoria:", error);
+                alert("Erro ao atualizar categoria");
+            }
+        }
+        // Fechar modal
+        function closeModal() {
+            document.getElementById("certificateModal").style.display = "none";
+            document.getElementById("categoryModal").style.display = "none";
+        }
+
+        // Fechar modal ao clicar fora
+        window.onclick = function(event) {
+            const certificateModal = document.getElementById("certificateModal");
+            const categoryModal = document.getElementById("categoryModal");
+            
+            if (event.target === certificateModal) {
+                certificateModal.style.display = "none";
+            }
+            
+            if (event.target === categoryModal) {
+                categoryModal.style.display = "none";
+            }
+        }
+
+        // Adicionar no script principal
+let lastUpdateTime = 0;
+let updateInterval;
+
+// Função para verificar atualizações
+async function checkForUpdates() {
+    try {
+        const response = await fetch("/check_updates?" + new Date().getTime()); // Evitar cache
+        const data = await response.json();
+        
+        // Verificar se houve mudanças
+        let hasChanges = false;
+        
+        data.forEach(file => {
+            const existingFile = currentFileData.find(f => f.arquivo === file.arquivo);
+            
+            if (!existingFile || 
+                existingFile.status !== file.status ||
+                existingFile.comment !== file.comment ||
+                existingFile.classificacao?.horas_validadas !== file.horas_validadas ||
+                existingFile.classificacao?.categoria !== file.categoria) {
+                
+                hasChanges = true;
+            }
+        });
+        
+        if (hasChanges) {
+            // Atualizar os dados locais
+            currentFileData = data.map(file => ({
+                arquivo: file.arquivo,
+                status: file.status,
+                comment: file.comment,
+                classificacao: {
+                    categoria: file.categoria,
+                    horas_validadas: file.horas_validadas,
+                    // Manter outros campos existentes
+                    ...(currentFileData.find(f => f.arquivo === file.arquivo)?.classificacao || {})
+                }
+            }));
+            
+            updateStudentTable();
+            showNotification("Atualização recebida: seus certificados foram revisados!");
+        }
+    } catch (error) {
+        console.error("Erro ao verificar atualizações:", error);
+    }
+}
+
+// Mostrar notificação
+function showNotification(message) {
+    const notification = document.createElement("div");
+    notification.style.position = "fixed";
+    notification.style.bottom = "20px";
+    notification.style.right = "20px";
+    notification.style.padding = "15px";
+    notification.style.backgroundColor = "#28a745";
+    notification.style.color = "white";
+    notification.style.borderRadius = "5px";
+    notification.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
+    notification.style.zIndex = "1000";
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.transition = "opacity 0.5s";
+        notification.style.opacity = "0";
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
+// Iniciar verificação periódica quando na visão do aluno
+function switchToStudent() {
+    document.getElementById("professorSection").classList.add("hidden");
+    document.getElementById("studentSection").classList.remove("hidden");
+    
+    // Iniciar polling
+    updateInterval = setInterval(checkForUpdates, 5000); // Verificar a cada 5 segundos
+    checkForUpdates(); // Verificar imediatamente
+}
+
+// Parar verificação quando mudar para professor
+function switchToProfessor() {
+    document.getElementById("studentSection").classList.add("hidden");
+    document.getElementById("professorSection").classList.remove("hidden");
+    
+    // Parar polling
+    clearInterval(updateInterval);
+    updateProfessorView();
+}
+
+// Iniciar polling quando a página carrega
+window.addEventListener("DOMContentLoaded", () => {
+    if (!document.getElementById("studentSection").classList.contains("hidden")) {
+        updateInterval = setInterval(checkForUpdates, 5000);
+    }
+});
+
+    </script>
+</body>
+</html>
+
