@@ -8,6 +8,15 @@ from typing import Set, Dict, Any
 
 app = Flask(__name__)
 
+@app.route("/")
+def home():
+    return "Minha aplicação Flask está rodando no Render!"
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Desativa cache para arquivos estáticos
 # Configuração do diretório de uploads e banco de dados
